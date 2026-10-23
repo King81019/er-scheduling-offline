@@ -1,3 +1,5 @@
+> 此版本是先前的簡易通用排班工具，並非原網站完整 web app。若要下載原網站的完整本機版，請前往 **[完整 web app 下載頁](https://github.com/King81019/er-scheduling-webapp/releases/latest)**。
+
 # 空白排班工具（離線版）
 
 下載單一 HTML，用瀏覽器開啟即可使用。無需安裝、登入或 Firebase。
