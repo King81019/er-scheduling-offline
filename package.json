@@ -1,0 +1,13 @@
+{
+  "name": "er-scheduling-offline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "單一 HTML 離線排班工具",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test.mjs"
+  },
+  "devDependencies": { "typescript": "5.9.3" }
+}

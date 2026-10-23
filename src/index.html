@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>空白排班工具 · 離線版</title>
+<style>/* INLINE_CSS */</style>
+</head>
+<body>
+<header><div><h1>空白排班工具 <small>離線版</small></h1><p>設定名單與班種，填寫預假，再產生班表。資料只存在這個瀏覽器。</p></div>
+<div class="actions"><button id="backup">匯出備份</button><button id="import">匯入備份</button><input type="file" id="restore" accept=".json,application/json" hidden><button id="print">列印班表</button><button id="csv">匯出 CSV</button></div></header>
+<main>
+<p id="status" role="status" aria-live="polite">尚未開始</p>
+<details open id="settings"><summary>1　人員與班種</summary><div class="columns"><section><h2>人員名單</h2><p>每行一個姓名，不需要填寫真實個資。變更名單會保留仍在名單中的人員資料。</p><label for="people">姓名（每行一位，不可重複）</label><textarea id="people" rows="6" placeholder="請輸入人員姓名"></textarea><button id="applyPeople">套用名單</button></section>
+<section><h2>班種與每日需求</h2><p>人數為每天該班所需人數，時間支援跨午夜。初次開啟沒有預設班種。</p><div class="scroll"><table><thead><tr><th>名稱</th><th>開始</th><th>結束</th><th>人數</th><th>操作</th></tr></thead><tbody id="shifts"></tbody></table></div><button id="addShift">新增班種</button></section></div>
+<section><h2>個人可上班種</h2><p>預設可上全部班種；取消勾選的班種不會自動排入。</p><div id="allowed" class="scroll"></div></section></details>
+<section><div class="toolbar"><h2>2　月份與預假</h2><label for="month">排班月份</label><input type="month" id="month" min="2000-01" max="2100-12"></div><p>點選格子設定整日預假，再點一次取消。變更設定或預假後，請重新排班或手動調整。</p><div id="vacations" class="scroll"></div></section>
+<details><summary>每日需求例外</summary><p>預設沿用上方人數。特殊日期可設定不同需求；留空恢復預設。</p><div id="requirements" class="scroll"></div></details>
+<section id="result"><div class="toolbar"><h2>3　班表</h2><button id="generate" class="primary">自動排班</button><button id="blank">建立空白班表</button></div><p>每人每天最多一班，可在表格手動調整。自動排班考量預假、可上班種、班間休息及連班；缺額會保留空缺。</p><p class="note">引擎以單月排班；跨月銜接與單位規則請自行確認。檢查結果是排班提示，不能取代完整的工時及法規審查。</p><div id="schedule" class="scroll"></div><div id="checks" aria-live="polite"></div></section>
+<footer><p>離線版 v1.0.0 · 不需登入、不連接雲端。請定期匯出 JSON 備份；更換瀏覽器、移動 HTML 或清除瀏覽資料後，可用備份還原。</p><button id="reset" class="danger">清除全部資料</button></footer>
+</main>
+<script>/* INLINE_APP */</script>
+</body></html>

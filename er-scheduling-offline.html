@@ -1,0 +1,1173 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>空白排班工具 · 離線版</title>
+<style>:root{color-scheme:light dark;--bg:#fff;--panel:#fafafa;--text:#27272a;--muted:#71717a;--line:#d4d4d8;--active:#18181b;--onactive:#fff;--bad:#b91c1c;--off:#f4f4f5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 system-ui,-apple-system,"Noto Sans TC",sans-serif}header,main{max-width:1440px;margin:auto;padding:20px 24px}header{border-bottom:1px solid var(--line)}h1{font-size:23px;margin:0}small{font-size:13px;font-weight:400;color:var(--muted)}h2{font-size:16px;margin:0}p{color:var(--muted);margin:6px 0 12px}.actions,.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.toolbar h2{margin-right:12px}button,.button,input,select,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:5px}button,.button{height:32px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;white-space:nowrap}button:hover,.button:hover{background:var(--off)}button:disabled{opacity:.5;cursor:default}button:focus-visible,.button:focus-within,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #2563eb;outline-offset:2px}.primary{background:var(--active);color:var(--onactive);border-color:var(--active)}.primary:hover{opacity:.85;background:var(--active)}.danger,.error{color:var(--bad)}input,select{height:32px;padding:0 6px}input[type=number]{width:65px}input[type=time]{width:110px}input[type=checkbox]{height:16px;accent-color:var(--active)}textarea{width:100%;padding:8px;display:block;margin:6px 0 10px;resize:vertical}section,details{padding:18px 0;border-bottom:1px solid var(--line)}details section:last-child{border:0}summary{font-size:16px;font-weight:600;cursor:pointer}.columns{display:grid;grid-template-columns:1fr 1.4fr;gap:28px}.scroll{overflow:auto;margin:10px 0;max-height:600px}table{border-collapse:separate;border-spacing:0;white-space:nowrap;font-size:13px}th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:5px 7px;vertical-align:middle;text-align:center}tr>*:first-child{border-left:1px solid var(--line);position:sticky;left:0;background:var(--bg);z-index:1;text-align:left}thead th{border-top:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:2}thead th:first-child{background:var(--panel);z-index:3}td select{min-width:70px;width:100%;max-width:150px}.day{font-weight:400;color:var(--muted);font-size:11px}.off{background:var(--off);color:var(--text)}.vacation{min-width:32px;padding:0 6px;border-color:transparent}.vacation[aria-pressed=true]{background:var(--active);color:var(--onactive)}.empty{padding:16px 0;color:var(--muted)}#status{min-height:24px;margin:0}.note{font-size:12px}#checks ul{padding-left:22px}#checks{margin:12px 0}footer{padding:20px 0;font-size:12px}label{display:inline-block}.cell-label{display:block;color:var(--muted);font-size:11px}.print-only{display:none}@media(prefers-color-scheme:dark){:root{--bg:#09090b;--panel:#18181b;--text:#e4e4e7;--muted:#a1a1aa;--line:#3f3f46;--active:#fafafa;--onactive:#18181b;--bad:#fca5a5;--off:#27272a}}@media(max-width:700px){header,main{padding:16px}.columns{grid-template-columns:1fr;gap:0}input,select,textarea{font-size:16px}.actions{gap:6px}h1{font-size:20px}th,td{padding:4px}.scroll{max-height:480px}}@media print{:root{--bg:#fff;--text:#000;--muted:#444;--line:#aaa;--panel:#eee}header,main{padding:0;max-width:none}header .actions,header p,#status,#settings,main>section:not(#result),main>details,footer,#result>.toolbar button,#result>p{display:none}#result{border:0;padding:8px 0}#schedule{overflow:visible;max-height:none}#schedule table{font-size:8px;width:100%;white-space:normal}#schedule th,#schedule td{padding:2px;position:static}#schedule select{display:none}.print-only{display:block}#checks{font-size:9px}.toolbar h2{font-size:14px}@page{size:A4 landscape;margin:8mm}}
+</style>
+</head>
+<body>
+<header><div><h1>空白排班工具 <small>離線版</small></h1><p>設定名單與班種，填寫預假，再產生班表。資料只存在這個瀏覽器。</p></div>
+<div class="actions"><button id="backup">匯出備份</button><button id="import">匯入備份</button><input type="file" id="restore" accept=".json,application/json" hidden><button id="print">列印班表</button><button id="csv">匯出 CSV</button></div></header>
+<main>
+<p id="status" role="status" aria-live="polite">尚未開始</p>
+<details open id="settings"><summary>1　人員與班種</summary><div class="columns"><section><h2>人員名單</h2><p>每行一個姓名，不需要填寫真實個資。變更名單會保留仍在名單中的人員資料。</p><label for="people">姓名（每行一位，不可重複）</label><textarea id="people" rows="6" placeholder="請輸入人員姓名"></textarea><button id="applyPeople">套用名單</button></section>
+<section><h2>班種與每日需求</h2><p>人數為每天該班所需人數，時間支援跨午夜。初次開啟沒有預設班種。</p><div class="scroll"><table><thead><tr><th>名稱</th><th>開始</th><th>結束</th><th>人數</th><th>操作</th></tr></thead><tbody id="shifts"></tbody></table></div><button id="addShift">新增班種</button></section></div>
+<section><h2>個人可上班種</h2><p>預設可上全部班種；取消勾選的班種不會自動排入。</p><div id="allowed" class="scroll"></div></section></details>
+<section><div class="toolbar"><h2>2　月份與預假</h2><label for="month">排班月份</label><input type="month" id="month" min="2000-01" max="2100-12"></div><p>點選格子設定整日預假，再點一次取消。變更設定或預假後，請重新排班或手動調整。</p><div id="vacations" class="scroll"></div></section>
+<details><summary>每日需求例外</summary><p>預設沿用上方人數。特殊日期可設定不同需求；留空恢復預設。</p><div id="requirements" class="scroll"></div></details>
+<section id="result"><div class="toolbar"><h2>3　班表</h2><button id="generate" class="primary">自動排班</button><button id="blank">建立空白班表</button></div><p>每人每天最多一班，可在表格手動調整。自動排班考量預假、可上班種、班間休息及連班；缺額會保留空缺。</p><p class="note">引擎以單月排班；跨月銜接與單位規則請自行確認。檢查結果是排班提示，不能取代完整的工時及法規審查。</p><div id="schedule" class="scroll"></div><div id="checks" aria-live="polite"></div></section>
+<footer><p>離線版 v1.0.0 · 不需登入、不連接雲端。請定期匯出 JSON 備份；更換瀏覽器、移動 HTML 或清除瀏覽資料後，可用備份還原。</p><button id="reset" class="danger">清除全部資料</button></footer>
+</main>
+<script>const Roster = (function(){const exports={};
+"use strict";
+// 通用空白排班工具 — 純邏輯（型別 + 基礎排班引擎）。
+//
+// 跟醫師端不同：這裡所有東西（班種、時間、人數、每日需求）都由 config 驅動，
+// 沒有任何寫死的班別或家族規則。給護理師等單位移植用的 prototype 地基。
+//
+// 進階規則（連班上限、班種銜接禁則、個人偏好）尚未實作 — 之後再加。
+// 目前引擎只做「公平填滿每天需求」。
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WEEKDAY_LABELS_MON = exports.WEEKDAY_LABELS = exports.VACATION_LEGEND = exports.SHIFT_CODES = exports.LABEL_TO_CODE = void 0;
+exports.emptyConfig = emptyConfig;
+exports.blankPerson = blankPerson;
+exports.blankField = blankField;
+exports.blankPosition = blankPosition;
+exports.defaultPositions = defaultPositions;
+exports.defaultShifts = defaultShifts;
+exports.parseVacationToken = parseVacationToken;
+exports.currentYm = currentYm;
+exports.daysInMonth = daysInMonth;
+exports.monthWeeks = monthWeeks;
+exports.weekdayOf = weekdayOf;
+exports.isWeekend = isWeekend;
+exports.isoWeekOf = isoWeekOf;
+exports.requirementForDate = requirementForDate;
+exports.shiftHours = shiftHours;
+exports.generateSchedule = generateSchedule;
+exports.newId = newId;
+exports.prevMonth = prevMonth;
+exports.nextMonth = nextMonth;
+function emptyConfig() {
+    return {
+        people: [],
+        personFields: [],
+        shifts: [],
+        positions: [],
+        dailyReq: {},
+        hardRules: [],
+        softRules: [],
+    };
+}
+/** 一個空白人員列 */
+function blankPerson() {
+    return {
+        id: newId("p"),
+        empId: "",
+        name: "",
+        allowedShifts: [],
+        allowedPositions: [],
+        attrs: {},
+    };
+}
+/** 一個空白人員欄位（預設文字型別） */
+function blankField() {
+    return { id: newId("f"), label: "", type: "text" };
+}
+/** 一個空白位置 */
+function blankPosition() {
+    return { id: newId("pos"), label: "" };
+}
+/** 預設位置：Leader / Triage / 重症 / 診間 / 留觀 / 行政 */
+function defaultPositions() {
+    return ["Leader", "Triage", "重症", "診間", "留觀", "行政"].map((label) => ({
+        id: newId("pos"),
+        label,
+    }));
+}
+/** 預設三班：大夜 / 白班 / 小夜 */
+function defaultShifts() {
+    return [
+        { id: newId("s"), label: "大夜班", start: "00:00", end: "08:00" },
+        { id: newId("s"), label: "白班", start: "08:00", end: "16:00" },
+        { id: newId("s"), label: "小夜班", start: "16:00", end: "00:00" },
+    ];
+}
+/** config 班種 label → 顯示班碼（與舊表一致：白=D8 夜=N8 中=H 小夜=E） */
+exports.LABEL_TO_CODE = {
+    白班: "D8",
+    夜班: "N8",
+    中班: "H",
+    小夜: "E",
+};
+exports.SHIFT_CODES = ["D8", "N8", "D", "E", "N", "H", "V"];
+exports.VACATION_LEGEND = {
+    E: "小夜",
+    H: "中班",
+    D: "白班",
+    N: "夜班",
+    D8: "白8",
+    N8: "夜8",
+    V: "休假",
+};
+/**
+ * 把一格的字串（如 "OFF" / "E/H" / "OFF/H" / "OFF/擬真"）解析成 VacationDay。
+ * 空字串回 null（代表該格沒填）。與匯入腳本的 Python 版同邏輯。
+ */
+function parseVacationToken(input) {
+    const raw = input.trim();
+    if (!raw)
+        return null;
+    const parts = raw
+        .split("/")
+        .map((p) => p.trim())
+        .filter(Boolean);
+    let off = false;
+    const only = [];
+    const alt = [];
+    const notes = [];
+    for (const p of parts) {
+        const base = p.replace(/\(.*?\)/g, "").trim();
+        if (base.toUpperCase() === "OFF")
+            off = true;
+        else if (exports.SHIFT_CODES.includes(base))
+            (off ? alt : only).push(base);
+        else if (base)
+            notes.push(base);
+    }
+    const d = { raw };
+    if (off)
+        d.off = true;
+    if (only.length)
+        d.only = only;
+    if (alt.length)
+        d.alt = alt;
+    if (notes.length)
+        d.notes = notes;
+    return d;
+}
+exports.WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
+/** 週一起頭的星期標籤（月曆用） */
+exports.WEEKDAY_LABELS_MON = ["一", "二", "三", "四", "五", "六", "日"];
+/** 當月 "YYYY-MM" */
+function currentYm() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+/** "2026-07" → ["2026-07-01", ..., "2026-07-31"] */
+function daysInMonth(ym) {
+    const [y, m] = ym.split("-").map(Number);
+    const last = new Date(y, m, 0).getDate();
+    const out = [];
+    for (let d = 1; d <= last; d++) {
+        out.push(`${ym}-${String(d).padStart(2, "0")}`);
+    }
+    return out;
+}
+/** 把某月切成週列（週一起頭），月初前與月末後補 null 對齊 7 欄 */
+function monthWeeks(ym) {
+    const days = daysInMonth(ym);
+    const lead = (weekdayOf(days[0]) + 6) % 7; // 週一=0 … 週日=6
+    const cells = [...Array(lead).fill(null), ...days];
+    while (cells.length % 7 !== 0)
+        cells.push(null);
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7)
+        weeks.push(cells.slice(i, i + 7));
+    return weeks;
+}
+function weekdayOf(dateISO) {
+    const [y, m, d] = dateISO.split("-").map(Number);
+    return new Date(y, m - 1, d).getDay();
+}
+/** 週末（六/日） */
+function isWeekend(dateISO) {
+    const wd = weekdayOf(dateISO);
+    return wd === 0 || wd === 6;
+}
+/** ISO 8601 週數（週一起頭，含當年第一個週四的那週為 W1） */
+function isoWeekOf(dateISO) {
+    const [y, m, d] = dateISO.split("-").map(Number);
+    const t = new Date(Date.UTC(y, m - 1, d));
+    const day = (t.getUTCDay() + 6) % 7; // 週一=0 … 週日=6
+    t.setUTCDate(t.getUTCDate() - day + 3); // 移到該週週四
+    const firstThu = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+    const fday = (firstThu.getUTCDay() + 6) % 7;
+    return 1 + Math.round(((t.getTime() - firstThu.getTime()) / 86400000 - 3 + fday) / 7);
+}
+/** 某日需求（shiftId → positionId → 人數）：逐日 dailyReq 優先，否則退回 defaultReq */
+function requirementForDate(config, dateISO) {
+    return config.dailyReq?.[dateISO] ?? config.defaultReq ?? {};
+}
+// ---- 勞基法合規參數（四週變形：第30-1 / 34 / 36-II-3 / 32 條）----
+/** 第34條：換班間隔至少連續 11h 休息 */
+const MIN_SHIFT_GAP_MIN = 11 * 60;
+/** 第30-1條：變形下每日正常工時上限 10h（超過部分算延長） */
+const NORMAL_HOURS_CAP = 10;
+/** 第32條：月延長工時上限 46h（未開放工會同意的 54h） */
+const MAX_OT_PER_MONTH = 46;
+/** 第36-II-3條：每2週至少 2 日例假、每4週例假+休息日至少 8 日 */
+const REST_PER_2WK = 2;
+const REST_PER_4WK = 8;
+/** 連續上班：硬上限 5 連（第 6 連禁止）；軟上限 4 連（上到第 5 連時降級、盡量避免） */
+const MAX_CONSECUTIVE = 5;
+const SOFT_CONSECUTIVE = 4;
+/** 預假班碼 → config 班種 label 候選（NP 與護理師的班種名不同，都要對得到） */
+const VAC_CODE_TO_LABELS = {
+    D: ["白班"],
+    N: ["夜班", "大夜班"],
+    H: ["中班"],
+    E: ["小夜", "小夜班"],
+    D8: ["白班"],
+    N8: ["夜班"],
+};
+function hhmmToMin(s) {
+    const [h, m] = (s ?? "").split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+}
+/** 班時數（跨午夜自動 +24h） */
+function shiftHours(shift) {
+    let dur = hhmmToMin(shift.end) - hhmmToMin(shift.start);
+    if (dur <= 0)
+        dur += 1440;
+    return dur / 60;
+}
+/** 該班延長工時（超過正常上限的部分） */
+function shiftOt(shift) {
+    return Math.max(0, shiftHours(shift) - NORMAL_HOURS_CAP);
+}
+/** 班的絕對起/訖分鐘（相對月初，dayIdx 0-based） */
+function shiftStartAbs(dayIdx, shift) {
+    return dayIdx * 1440 + hhmmToMin(shift.start);
+}
+function shiftEndAbs(dayIdx, shift) {
+    let end = hhmmToMin(shift.end);
+    if (hhmmToMin(shift.end) <= hhmmToMin(shift.start))
+        end += 1440;
+    return dayIdx * 1440 + end;
+}
+/**
+ * 排班引擎（v2，含預假 + 勞基法四週變形硬規則）：
+ * - 逐日掃，依 config.shifts × config.positions 順序填人；一人一天最多一班
+ * - 預假(vacation)：off 不排、only 限定當天可上班別、alt 只在缺額時動且降序
+ * - 硬規則（候選人過濾）：第34條 11h 換班間隔、第32條 月延長工時≤46h、連上≤5天
+ * - 軟規則（排序降級）：上到第5連班者「缺人才動」，盡量不連上>4天
+ * - 公平：剩餘候選挑累計班數最少者；人不夠記 shortages
+ * - 後檢查（warnings，不阻擋）：第36-II-3 每2週≥2例假/每4週≥8休、OT 總時數
+ */
+function generateSchedule(config, ym, vacation, opts) {
+    var _a, _b, _c, _d, _e, _f;
+    const nightIds = opts?.nightRotationEmpIds ?? [];
+    const preassigned = opts?.preassigned;
+    const targets = opts?.targets;
+    const excluded = new Set(opts?.excludeEmpIds ?? []);
+    const homeStrict = new Set(opts?.homeStrictShiftIds ?? []);
+    const maxHours = opts?.maxHoursPerPerson;
+    // 預假查表：empId → date → VacationDay
+    const vacByEmp = new Map();
+    for (const vp of vacation?.people ?? [])
+        vacByEmp.set(vp.empId, vp.days ?? {});
+    // 班種 label → id（把預假班碼對到實際班種）
+    const shiftIdByLabel = new Map();
+    for (const s of config.shifts)
+        shiftIdByLabel.set(s.label, s.id);
+    const codesToShiftIds = (codes) => {
+        const ids = new Set();
+        for (const c of codes)
+            for (const label of VAC_CODE_TO_LABELS[c] ?? []) {
+                const id = shiftIdByLabel.get(label);
+                if (id)
+                    ids.add(id);
+            }
+        return ids;
+    };
+    const shiftDurH = (s) => {
+        let min = hhmmToMin(s.end) - hhmmToMin(s.start);
+        if (min <= 0)
+            min += 1440;
+        return min / 60;
+    };
+    const allDates = daysInMonth(ym);
+    const shiftById = new Map(config.shifts.map((s) => [s.id, s]));
+    // 上月月尾狀態（empId → personId 對照）
+    const prevConsecById = {};
+    const prevEndById = {};
+    if (opts?.prevTail) {
+        for (const p of config.people) {
+            const t = p.empId ? opts.prevTail[p.empId] : undefined;
+            if (!t)
+                continue;
+            if (t.consec > 0)
+                prevConsecById[p.id] = t.consec;
+            if (t.lastEndAbs != null)
+                prevEndById[p.id] = t.lastEndAbs;
+        }
+    }
+    // 各班別的站別順序（rowOrder 優先、其餘補在後）；順序＝填補順位
+    const posSeqCache = new Map();
+    const posSeqOf = (sid) => {
+        let seq = posSeqCache.get(sid);
+        if (!seq) {
+            const order = config.rowOrder?.[sid];
+            if (order?.length) {
+                const uniq = [...new Set(order)]; // rowOrder 每列一項可重複；順位取站別首次出現
+                const byId = new Map(config.positions.map((p) => [p.id, p]));
+                seq = [
+                    ...uniq.map((id) => byId.get(id)).filter(Boolean),
+                    ...config.positions.filter((p) => !uniq.includes(p.id)),
+                ];
+            }
+            else
+                seq = config.positions;
+            posSeqCache.set(sid, seq);
+        }
+        return seq;
+    };
+    // 整月排一遍。
+    // quota：每班每天的自動排配額（用不完往後滾），用來分散缺額。
+    // onlyPositions：只排這些站（其他站需求視為 0；鎖定仍照放）——優先站別的前置排程用。
+    // priorityPre：前置排程結果（date → shiftId → posId → personId[]），當預置放入；
+    //   並對「未來還有預置班」的人做前瞻守衛（連上鏈/隔日銜接/工時額度）。
+    // onlyCells：只排這些 `${date}|${shiftId}`（其他需求視為 0）——薄日保護的前置排程用。
+    const execute = (quota, onlyPositions, priorityPre, onlyCells) => {
+        // personId → dayIdx → shiftId（未來優先班查表，前瞻守衛用）
+        const futurePri = new Map();
+        if (priorityPre) {
+            allDates.forEach((date, di) => {
+                for (const [sid, poss] of Object.entries(priorityPre[date] ?? {}))
+                    for (const ids of Object.values(poss))
+                        for (const id of ids) {
+                            (futurePri.get(id) ?? futurePri.set(id, new Map()).get(id)).set(di, sid);
+                        }
+            });
+        }
+        const assignments = {};
+        const shortages = [];
+        const perPerson = {};
+        for (const p of config.people)
+            perPerson[p.id] = 0;
+        // 跨日狀態（合規檢查用）；lastEndAbs 以上月最後一班起算（跨月 11h 間隔）
+        const lastEndAbs = { ...prevEndById }; // personId → 上一個班的訖（絕對分鐘）
+        const otTotal = {}; // personId → 累計延長工時(h)
+        const hoursTotal = {}; // personId → 累計總工時(h)
+        const workedDates = {}; // personId → 已排到班的日期
+        for (const p of config.people) {
+            otTotal[p.id] = 0;
+            hoursTotal[p.id] = 0;
+            workedDates[p.id] = new Set();
+        }
+        // 每班每天自動排到的人數（分散缺額的試跑統計）＋配額結轉
+        const autoFilled = new Map();
+        for (const s of config.shifts)
+            autoFilled.set(s.id, allDates.map(() => 0));
+        const carry = {};
+        allDates.forEach((date, dayIdx) => {
+            const req = requirementForDate(config, date);
+            const usedToday = new Set();
+            assignments[date] = {};
+            const placeCount = (id, shift) => {
+                usedToday.add(id);
+                perPerson[id] = (perPerson[id] ?? 0) + 1;
+                lastEndAbs[id] = shiftEndAbs(dayIdx, shift);
+                otTotal[id] = (otTotal[id] ?? 0) + shiftOt(shift);
+                hoursTotal[id] = (hoursTotal[id] ?? 0) + shiftDurH(shift);
+                (workedDates[id] ?? (workedDates[id] = new Set())).add(date);
+            };
+            // 帶站別的鎖定：開排前先全部放到位（佔自己的站，不吃掉排序在前的站的名額）
+            // 來源①手動鎖定（preassigned 物件形狀）②優先站別前置排程（priorityPre）
+            const prePlaced = new Map(); // `${shiftId}|${posId}` → personId[]
+            const addPre = (entry, shift) => {
+                for (const [posId, ids] of Object.entries(entry)) {
+                    for (const id of ids) {
+                        if (usedToday.has(id))
+                            continue;
+                        const key = `${shift.id}|${posId}`;
+                        prePlaced.set(key, [...(prePlaced.get(key) ?? []), id]);
+                        placeCount(id, shift);
+                    }
+                }
+            };
+            for (const shift of config.shifts) {
+                const entry = preassigned?.[date]?.[shift.id];
+                if (entry && !Array.isArray(entry))
+                    addPre(entry, shift);
+                const pri = priorityPre?.[date]?.[shift.id];
+                if (pri)
+                    addPre(pri, shift);
+            }
+            for (const shift of config.shifts) {
+                assignments[date][shift.id] = {};
+                const posReq = req[shift.id] ?? {};
+                // 前置排程的範圍限制：非優先站／非指定日班的需求視為 0（鎖定仍照放）
+                const needOf = (posId) => {
+                    if (onlyPositions && !onlyPositions.has(posId))
+                        return 0;
+                    if (onlyCells && !onlyCells.has(`${date}|${shift.id}`))
+                        return 0;
+                    return posReq[posId] ?? 0;
+                };
+                // ① 鎖定的人（manager 手動指定，跳過所有限制）：
+                // 帶站別的已在日初放好；不帶站別的（legacy）照舊塞進順位前面有需求的站
+                const posSeq = posSeqOf(shift.id);
+                const preByPos = {};
+                for (const pos of posSeq)
+                    preByPos[pos.id] = [...(prePlaced.get(`${shift.id}|${pos.id}`) ?? [])];
+                const legacy = preassigned?.[date]?.[shift.id];
+                if (Array.isArray(legacy)) {
+                    for (const pos of posSeq) {
+                        const need = needOf(pos.id);
+                        for (const id of legacy) {
+                            if (preByPos[pos.id].length >= need)
+                                break;
+                            if (usedToday.has(id))
+                                continue;
+                            preByPos[pos.id].push(id);
+                            placeCount(id, shift);
+                        }
+                    }
+                }
+                const shiftCands = [];
+                for (const p of config.people) {
+                    if (usedToday.has(p.id))
+                        continue;
+                    // 部分工時等：不自動排（但 preassigned 鎖定的仍會被放）
+                    if (p.empId && excluded.has(p.empId))
+                        continue;
+                    // 既有：可上班種
+                    const aS = p.allowedShifts ?? [];
+                    if (aS.length && !aS.includes(shift.id))
+                        continue;
+                    // 夜班輪值：當月夜班只排輪值的人（定義了才限制）
+                    if (shift.label === "夜班" && nightIds.length && !nightIds.includes(p.empId ?? ""))
+                        continue;
+                    // 預假
+                    let deprioritized = false;
+                    const vac = p.empId ? vacByEmp.get(p.empId)?.[date] : undefined;
+                    if (vac) {
+                        if (vac.only?.length) {
+                            if (!codesToShiftIds(vac.only).has(shift.id))
+                                continue; // 那天只能上特定班
+                        }
+                        else if (vac.off) {
+                            if (vac.alt?.length) {
+                                if (!codesToShiftIds(vac.alt).has(shift.id))
+                                    continue; // 想休但限這些班
+                                deprioritized = true; // 缺額才動
+                            }
+                            else {
+                                continue; // 純預假（含 OFF/擬真）→ 不排
+                            }
+                        }
+                    }
+                    // 第34條：與上一個班間隔 ≥ 11h
+                    const prevEnd = lastEndAbs[p.id];
+                    if (prevEnd != null && shiftStartAbs(dayIdx, shift) - prevEnd < MIN_SHIFT_GAP_MIN)
+                        continue;
+                    // 第32條：月延長工時上限
+                    if (otTotal[p.id] + shiftOt(shift) > MAX_OT_PER_MONTH)
+                        continue;
+                    // 前瞻守衛：這人未來已排定的優先班（如 Leader）不能被今天的排班破壞
+                    const priDays = futurePri.get(p.id);
+                    // 法定工時上限（原則：不超過）：到頂的人不再自動排（鎖定不受限）。
+                    // 未來優先班的工時先預留，不讓其他站吃掉額度。
+                    if (maxHours != null) {
+                        let reserve = 0;
+                        if (priDays)
+                            for (const [k, sid] of priDays)
+                                if (k > dayIdx)
+                                    reserve += shiftDurH(shiftById.get(sid) ?? shift);
+                        if (hoursTotal[p.id] + shiftDurH(shift) + reserve > maxHours)
+                            continue;
+                    }
+                    // 隔日銜接：明天有優先班 → 今天這班的訖到明天優先班的始要 ≥ 11h
+                    if (priDays) {
+                        const nsid = priDays.get(dayIdx + 1);
+                        const ns = nsid ? shiftById.get(nsid) : undefined;
+                        if (ns && shiftStartAbs(dayIdx + 1, ns) - shiftEndAbs(dayIdx, shift) < MIN_SHIFT_GAP_MIN)
+                            continue;
+                    }
+                    // 連續上班天數（往前數已排的連續日＋往後數已排定的優先班連續日）：
+                    // 硬限整鏈 ≤5、軟限盡量 ≤4。連到月初沒斷 → 接上月月尾的連上天數。
+                    let consec = 0;
+                    for (let k = dayIdx - 1; k >= 0; k--) {
+                        if (workedDates[p.id]?.has(allDates[k]))
+                            consec++;
+                        else
+                            break;
+                    }
+                    if (consec === dayIdx)
+                        consec += prevConsecById[p.id] ?? 0;
+                    let fwd = 0;
+                    if (priDays)
+                        for (let k = dayIdx + 1; priDays.has(k); k++)
+                            fwd++;
+                    if (consec + 1 + fwd > MAX_CONSECUTIVE)
+                        continue; // 整鏈會連 6，禁止
+                    const consecSoft = consec + 1 + fwd > SOFT_CONSECUTIVE; // 整鏈會連 5，盡量避免
+                    // 本班時段（軟偏好）：未設 homeShiftId＝不限，視為本班
+                    const homeMatch = !p.homeShiftId || p.homeShiftId === shift.id;
+                    // 嚴格本班班種（如大夜）：非本班人不當候選，本班人不夠就留空（不跨班補）
+                    if (homeStrict.has(shift.id) && p.homeShiftId !== shift.id)
+                        continue;
+                    shiftCands.push({ id: p.id, deprioritized, homeMatch, consecSoft, back: consec, allowedPos: p.allowedPositions ?? [] });
+                }
+                // 排序：非降級(alt/連5)優先 → 未達目標優先 → 本班時段優先 → 連班聚集 → 累計班數少優先
+                // 降級＝alt 預假(想休)或上到第5連班，兩者都「缺人才動」。
+                // homeMatch 放在「未過目標」之後＝盡量排本班，但本班人到月目標就讓位給跨班的人，
+                // 避免某時段人少時把該組操爆（大夜需求>大夜人數時靠白/小夜支援）。
+                const overTarget = (id) => {
+                    const emp = config.people.find((p) => p.id === id)?.empId;
+                    const t = emp ? targets?.[emp] : undefined;
+                    return t != null && perPerson[id] >= t;
+                };
+                const soft = (c) => c.deprioritized || c.consecSoft;
+                // 連班聚集：連上 1..N-1 天＝續班優先(0)；休息中＝居中(1)；連滿 N 天＝降後去休息(2)
+                const runLen = opts?.preferRunLen && (!opts.preferRunShiftIds || opts.preferRunShiftIds.includes(shift.id))
+                    ? opts.preferRunLen
+                    : 0;
+                const clusterRank = (c) => (c.back >= runLen ? 2 : c.back === 0 ? 1 : 0);
+                shiftCands.sort((a, b) => {
+                    const sa = soft(a), sb = soft(b);
+                    if (sa !== sb)
+                        return sa ? 1 : -1;
+                    const oa = overTarget(a.id), ob = overTarget(b.id);
+                    if (oa !== ob)
+                        return oa ? 1 : -1;
+                    if (a.homeMatch !== b.homeMatch)
+                        return a.homeMatch ? -1 : 1;
+                    if (runLen > 0) {
+                        const ra = clusterRank(a), rb = clusterRank(b);
+                        if (ra !== rb)
+                            return ra - rb;
+                    }
+                    return perPerson[a.id] - perPerson[b.id];
+                });
+                // ③ 順位優先配對（Kuhn 增廣）：缺額留給順位後面的站。
+                // slot 依該班站別順序（rowOrder ?? positions）展開；每個 slot 依公平排序嘗試候選人；
+                // 後面的站要人時可把已配對的人挪到他會的其他站，讓順位前面的站盡量填滿。
+                const slotPosIds = [];
+                for (const pos of posSeq) {
+                    const remain = needOf(pos.id) - preByPos[pos.id].length;
+                    for (let k = 0; k < remain; k++)
+                        slotPosIds.push(pos.id);
+                }
+                // 分散缺額：本日配額（含前面沒用完的結轉）；超出配額的 slot 從順位尾端截掉
+                const qArr = quota?.get(shift.id);
+                const avail = qArr ? (carry[shift.id] ?? 0) + qArr[dayIdx] : Infinity;
+                if (slotPosIds.length > avail)
+                    slotPosIds.length = avail;
+                const candsByPos = new Map();
+                for (const pos of config.positions)
+                    candsByPos.set(pos.id, shiftCands.filter((c) => !c.allowedPos.length || c.allowedPos.includes(pos.id)));
+                const matchSlot = slotPosIds.map(() => null);
+                const matchPerson = new Map();
+                const tryFill = (slotIdx, visited) => {
+                    for (const c of candsByPos.get(slotPosIds[slotIdx]) ?? []) {
+                        if (visited.has(c.id))
+                            continue;
+                        visited.add(c.id);
+                        const cur = matchPerson.get(c.id);
+                        if (cur == null || tryFill(cur, visited)) {
+                            matchPerson.set(c.id, slotIdx);
+                            matchSlot[slotIdx] = c.id;
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+                for (let i = 0; i < slotPosIds.length; i++)
+                    tryFill(i, new Set());
+                autoFilled.get(shift.id)[dayIdx] = matchPerson.size;
+                if (qArr)
+                    carry[shift.id] = avail - matchPerson.size;
+                // ④ 寫回結果：鎖定 + 配對；缺額記 shortage
+                const filledByPos = {};
+                matchSlot.forEach((pid, i) => {
+                    var _a;
+                    if (pid)
+                        (filledByPos[_a = slotPosIds[i]] ?? (filledByPos[_a] = [])).push(pid);
+                });
+                for (const pid of matchPerson.keys())
+                    placeCount(pid, shift);
+                for (const pos of posSeq) {
+                    const need = needOf(pos.id);
+                    const picked = [...preByPos[pos.id], ...(filledByPos[pos.id] ?? [])];
+                    assignments[date][shift.id][pos.id] = picked;
+                    if (picked.length < need) {
+                        shortages.push({
+                            date,
+                            shiftId: shift.id,
+                            positionId: pos.id,
+                            need,
+                            got: picked.length,
+                        });
+                    }
+                }
+            }
+        });
+        return { assignments, shortages, perPerson, otTotal, workedDates, autoFilled };
+    };
+    // 優先站別（如 Leader）先整月排滿：單獨排一遍只填優先站，
+    // 結果當預置帶進正式排班（會的人的連上/工時額度優先留給這些站）。
+    let priorityPre;
+    const priorityIds = opts?.priorityPositionIds ?? [];
+    if (priorityIds.length) {
+        const pp = execute(undefined, new Set(priorityIds));
+        priorityPre = {};
+        for (const [date, byShift] of Object.entries(pp.assignments))
+            for (const [sid, byPos] of Object.entries(byShift))
+                for (const pid of priorityIds) {
+                    const ids = byPos[pid] ?? [];
+                    if (ids.length)
+                        ((_b = ((_a = (priorityPre[date] ?? (priorityPre[date] = {})))[sid] ?? (_a[sid] = {})))[pid] ?? (_b[pid] = [])).push(...ids);
+                }
+    }
+    // 薄日保護：可用人數 ≤ 需求的日班先整月預排（結果併入 priorityPre，前瞻守衛生效）
+    if (opts?.protectThinDays) {
+        const thinCells = new Set();
+        for (const date of allDates) {
+            const req = requirementForDate(config, date);
+            for (const shift of config.shifts) {
+                const needN = Object.values(req[shift.id] ?? {}).reduce((a, b) => a + b, 0);
+                if (needN <= 0)
+                    continue;
+                let avail = 0;
+                for (const p of config.people) {
+                    if (p.empId && excluded.has(p.empId))
+                        continue;
+                    const aS = p.allowedShifts ?? [];
+                    if (aS.length && !aS.includes(shift.id))
+                        continue;
+                    if (homeStrict.has(shift.id) && p.homeShiftId !== shift.id)
+                        continue;
+                    const vac = p.empId ? vacByEmp.get(p.empId)?.[date] : undefined;
+                    if (vac) {
+                        if (vac.only?.length) {
+                            if (!codesToShiftIds(vac.only).has(shift.id))
+                                continue;
+                        }
+                        else if (vac.off) {
+                            if (!vac.alt?.length || !codesToShiftIds(vac.alt).has(shift.id))
+                                continue;
+                        }
+                    }
+                    avail++;
+                }
+                if (avail <= needN)
+                    thinCells.add(`${date}|${shift.id}`);
+            }
+        }
+        if (thinCells.size) {
+            const tp = execute(undefined, undefined, priorityPre, thinCells);
+            const merged = JSON.parse(JSON.stringify(priorityPre ?? {}));
+            for (const [date, byShift] of Object.entries(tp.assignments)) {
+                for (const [sid, byPos] of Object.entries(byShift)) {
+                    if (!thinCells.has(`${date}|${sid}`))
+                        continue;
+                    for (const [pid, ids] of Object.entries(byPos))
+                        if (ids.length) {
+                            const cur = ((_d = ((_c = (merged[date] ?? (merged[date] = {})))[sid] ?? (_c[sid] = {})))[pid] ?? (_d[pid] = []));
+                            for (const id of ids)
+                                if (!cur.includes(id))
+                                    cur.push(id);
+                        }
+                }
+            }
+            priorityPre = merged;
+        }
+    }
+    // 分散缺額（原則：空格不集中在同一天）：先試跑測出每班當月實際可排量 F，
+    // 攤平成每日配額（floor 累積差分，餘數均勻散開；用不完往後滾）後重排一遍。
+    let quota;
+    if (opts?.spreadShortages) {
+        const probe = execute(undefined, undefined, priorityPre);
+        quota = new Map();
+        const D = allDates.length;
+        for (const [sid, byDay] of probe.autoFilled) {
+            const F = byDay.reduce((a, b) => a + b, 0);
+            quota.set(sid, allDates.map((_, i) => Math.floor(((i + 1) * F) / D) - Math.floor((i * F) / D)));
+        }
+    }
+    let result = execute(quota, undefined, priorityPre);
+    // 補滿 pass：配額分散可能砍到「其實有人可上」的格子（配額是算術攤的，不看當日人力）。
+    // 把結果當預置、不帶配額重跑一遍：還有人可上的空格補起來；月上限吃緊時補不進去，分散效果保留。
+    if (quota) {
+        const asPre = {};
+        for (const [date, byShift] of Object.entries(result.assignments))
+            for (const [sid, byPos] of Object.entries(byShift))
+                for (const [pid, ids] of Object.entries(byPos))
+                    if (ids.length)
+                        ((_f = ((_e = (asPre[date] ?? (asPre[date] = {})))[sid] ?? (_e[sid] = {})))[pid] ?? (_f[pid] = [])).push(...ids);
+        result = execute(undefined, undefined, asPre);
+    }
+    // 挪移修補：空格若只差「連上會超 5」，把候選人連班鏈上的一天讓給別人、人挪過來填。
+    if (opts?.repairShortages && result.shortages.length) {
+        const a = result.assignments;
+        const dayIdxOf = new Map(allDates.map((d, i) => [d, i]));
+        // person → dayIdx → 當天班/站
+        const byPerson = new Map();
+        for (const [date, byShift] of Object.entries(a)) {
+            const di = dayIdxOf.get(date);
+            for (const [sid, byPos] of Object.entries(byShift))
+                for (const [pos, ids] of Object.entries(byPos))
+                    for (const id of ids)
+                        (byPerson.get(id) ?? byPerson.set(id, new Map()).get(id)).set(di, { sid, pos });
+        }
+        const hours = {};
+        for (const p of config.people)
+            hours[p.id] = 0;
+        for (const [id, m] of byPerson)
+            for (const { sid } of m.values())
+                hours[id] += shiftDurH(shiftById.get(sid));
+        // 不可挪動：手動鎖定（優先站的班「可挪」，但挪走時遞迴一定會把該站補回，排滿保證不變）
+        const fixed = new Set(); // `${date}|${shiftId}|${personId}`
+        for (const [date, byShift] of Object.entries(preassigned ?? {}))
+            for (const [sid, entry] of Object.entries(byShift)) {
+                const ids = Array.isArray(entry) ? entry : Object.values(entry).flat();
+                for (const id of ids)
+                    fixed.add(`${date}|${sid}|${id}`);
+            }
+        const personById = new Map(config.people.map((p) => [p.id, p]));
+        const chainIfAdd = (id, di) => {
+            const m = byPerson.get(id);
+            let back = 0;
+            for (let k = di - 1; k >= 0 && m?.has(k); k--)
+                back++;
+            if (back === di)
+                back += prevConsecById[id] ?? 0; // 連到月初沒斷 → 接上月
+            let fwd = 0;
+            for (let k = di + 1; k < allDates.length && m?.has(k); k++)
+                fwd++;
+            return back + 1 + fwd;
+        };
+        const gapOK = (id, di, shift) => {
+            const m = byPerson.get(id);
+            const prev = m?.get(di - 1);
+            if (prev) {
+                const ps = shiftById.get(prev.sid);
+                if (shiftStartAbs(di, shift) - shiftEndAbs(di - 1, ps) < MIN_SHIFT_GAP_MIN)
+                    return false;
+            }
+            else if (di === 0) {
+                const pe = prevEndById[id];
+                if (pe != null && shiftStartAbs(0, shift) - pe < MIN_SHIFT_GAP_MIN)
+                    return false; // 上月最後一班的 11h 銜接
+            }
+            const next = m?.get(di + 1);
+            if (next) {
+                const ns = shiftById.get(next.sid);
+                if (shiftStartAbs(di + 1, ns) - shiftEndAbs(di, shift) < MIN_SHIFT_GAP_MIN)
+                    return false;
+            }
+            return true;
+        };
+        // 合法性（不含連上）。ignoreHours＝跳過工時上限（挪移分支用：讓一天換一天＝淨工時不變）
+        const legal = (id, di, shift, posId, ignoreHours = false) => {
+            const p = personById.get(id);
+            if (!p)
+                return false;
+            if (byPerson.get(id)?.has(di))
+                return false; // 當天已有班
+            if (p.empId && excluded.has(p.empId))
+                return false;
+            const aS = p.allowedShifts ?? [];
+            if (aS.length && !aS.includes(shift.id))
+                return false;
+            const aP = p.allowedPositions ?? [];
+            if (aP.length && !aP.includes(posId))
+                return false;
+            if (shift.label === "夜班" && nightIds.length && !nightIds.includes(p.empId ?? ""))
+                return false;
+            if (homeStrict.has(shift.id) && p.homeShiftId !== shift.id)
+                return false;
+            const vac = p.empId ? vacByEmp.get(p.empId)?.[allDates[di]] : undefined;
+            if (vac) {
+                if (vac.only?.length) {
+                    if (!codesToShiftIds(vac.only).has(shift.id))
+                        return false;
+                }
+                else if (vac.off) {
+                    if (!vac.alt?.length || !codesToShiftIds(vac.alt).has(shift.id))
+                        return false; // 純預假不動；alt=缺人才動，修補正是缺人
+                }
+            }
+            if (!ignoreHours && maxHours != null && hours[id] + shiftDurH(shift) > maxHours)
+                return false;
+            if (!gapOK(id, di, shift))
+                return false;
+            return true;
+        };
+        const commitAdd = (id, di, shift, posId) => {
+            var _a, _b;
+            const date = allDates[di];
+            ((_a = (a[date] ?? (a[date] = {})))[_b = shift.id] ?? (_a[_b] = {}))[posId] = [...(a[date][shift.id][posId] ?? []), id];
+            (byPerson.get(id) ?? byPerson.set(id, new Map()).get(id)).set(di, { sid: shift.id, pos: posId });
+            hours[id] += shiftDurH(shift);
+            result.perPerson[id] = (result.perPerson[id] ?? 0) + 1;
+        };
+        const commitRemove = (id, di, sid, posId) => {
+            const date = allDates[di];
+            a[date][sid][posId] = (a[date][sid][posId] ?? []).filter((x) => x !== id);
+            byPerson.get(id)?.delete(di);
+            hours[id] -= shiftDurH(shiftById.get(sid));
+            result.perPerson[id] = (result.perPerson[id] ?? 0) - 1;
+        };
+        // 遞迴補格：直接有人就填；「連上卡住」或「工時到頂」的人可退掉一天（該天遞迴找人補）
+        // 再來補這格——退一天換上一天＝淨工時不變。最多 REPAIR_DEPTH 層；失敗完整回復。
+        // budget＝搜尋預算（放寬候選後樹會變大，防爆炸）。
+        const REPAIR_DEPTH = 5;
+        let repairBudget = 300000;
+        const coverSlot = (di, shift, posId, depth, exclude) => {
+            if (--repairBudget <= 0)
+                return false;
+            const cands = config.people
+                .filter((q) => !exclude.has(q.id) && legal(q.id, di, shift, posId))
+                .sort((x, y) => (hours[x.id] ?? 0) - (hours[y.id] ?? 0));
+            for (const q of cands)
+                if (chainIfAdd(q.id, di) <= MAX_CONSECUTIVE) {
+                    commitAdd(q.id, di, shift, posId);
+                    return true;
+                }
+            if (depth <= 0)
+                return false;
+            // 挪移候選：連上卡住（在 cands 裡）＋工時到頂（legal 放寬工時才看得到）的人
+            const looseCands = config.people
+                .filter((q) => !exclude.has(q.id) && legal(q.id, di, shift, posId, true))
+                .sort((x, y) => (hours[x.id] ?? 0) - (hours[y.id] ?? 0));
+            const newDur = shiftDurH(shift);
+            for (const q of looseCands) {
+                const m = byPerson.get(q.id);
+                if (!m)
+                    continue;
+                // 退讓日候選：連班鏈上的日子優先（離空格越遠、切鏈越有效），其次其他天（工時釋放用）
+                const chainDays = [];
+                for (let k = di - 1; m.has(k); k--)
+                    chainDays.push(k);
+                for (let k = di + 1; m.has(k); k++)
+                    chainDays.push(k);
+                chainDays.sort((x, y) => Math.abs(y - di) - Math.abs(x - di));
+                const otherDays = [...m.keys()].filter((k) => !chainDays.includes(k)).sort((x, y) => Math.abs(y - di) - Math.abs(x - di));
+                for (const D of [...chainDays, ...otherDays]) {
+                    const asg = m.get(D);
+                    if (fixed.has(`${allDates[D]}|${asg.sid}|${q.id}`))
+                        continue;
+                    // 模擬移除：鏈長/銜接/工時（退 D 的時數、加這格的時數）都要通過才值得讓
+                    m.delete(D);
+                    const ok = chainIfAdd(q.id, di) <= MAX_CONSECUTIVE &&
+                        gapOK(q.id, di, shift) &&
+                        (maxHours == null || hours[q.id] - shiftDurH(shiftById.get(asg.sid)) + newDur <= maxHours);
+                    m.set(D, asg);
+                    if (!ok)
+                        continue;
+                    commitRemove(q.id, D, asg.sid, asg.pos);
+                    const dShift = shiftById.get(asg.sid);
+                    if (coverSlot(D, dShift, asg.pos, depth - 1, new Set(exclude).add(q.id))) {
+                        commitAdd(q.id, di, shift, posId);
+                        return true;
+                    }
+                    commitAdd(q.id, D, dShift, asg.pos); // 連鎖失敗：回復
+                }
+            }
+            // 同日換站：當天同班已在別站、會這站的人挪過來（時數/鏈長不變），原站的洞遞迴補
+            for (const r of config.people) {
+                if (exclude.has(r.id))
+                    continue;
+                const asg2 = byPerson.get(r.id)?.get(di);
+                if (!asg2 || asg2.sid !== shift.id || asg2.pos === posId)
+                    continue;
+                if (fixed.has(`${allDates[di]}|${asg2.sid}|${r.id}`))
+                    continue; // 手動鎖定不動
+                const aP2 = personById.get(r.id)?.allowedPositions ?? [];
+                if (aP2.length && !aP2.includes(posId))
+                    continue;
+                commitRemove(r.id, di, asg2.sid, asg2.pos);
+                commitAdd(r.id, di, shift, posId);
+                if (coverSlot(di, shift, asg2.pos, depth - 1, new Set(exclude).add(r.id)))
+                    return true;
+                commitRemove(r.id, di, shift.id, posId); // 回復
+                commitAdd(r.id, di, shiftById.get(asg2.sid), asg2.pos);
+            }
+            return false;
+        };
+        const stillShort = [];
+        for (const sh of result.shortages) {
+            const di = dayIdxOf.get(sh.date);
+            const shift = shiftById.get(sh.shiftId);
+            let remaining = sh.need - sh.got;
+            if (shift) {
+                while (remaining > 0 && coverSlot(di, shift, sh.positionId, REPAIR_DEPTH, new Set()))
+                    remaining--;
+            }
+            if (remaining > 0)
+                stillShort.push({ ...sh, got: sh.need - remaining });
+        }
+        result = { ...result, shortages: stillShort };
+        // 供後檢查：依挪移後結果重建跨日狀態
+        for (const p of config.people) {
+            result.workedDates[p.id] = new Set();
+            result.otTotal[p.id] = 0;
+        }
+        for (const [date, byShift] of Object.entries(a))
+            for (const [sid, byPos] of Object.entries(byShift))
+                for (const ids of Object.values(byPos))
+                    for (const id of ids) {
+                        result.workedDates[id].add(date);
+                        result.otTotal[id] += shiftOt(shiftById.get(sid));
+                    }
+    }
+    const { assignments, shortages, perPerson, otTotal, workedDates } = result;
+    // ---- 後檢查：第36-II-3 休假窗口 + OT 總時數（warnings，不阻擋）----
+    const warnings = [];
+    const nameOf = (pid) => config.people.find((p) => p.id === pid)?.name ?? pid;
+    const offCountInWindow = (worked, start, len) => {
+        let off = 0;
+        for (let i = start; i < start + len && i < allDates.length; i++)
+            if (!worked.has(allDates[i]))
+                off++;
+        return off;
+    };
+    for (const p of config.people) {
+        const worked = workedDates[p.id];
+        // 每 2 週(14日)滑動窗口至少 2 例假
+        for (let s = 0; s + 14 <= allDates.length; s++) {
+            if (offCountInWindow(worked, s, 14) < REST_PER_2WK) {
+                warnings.push(`${nameOf(p.id)}：${allDates[s].slice(5)}起兩週內休假不足 ${REST_PER_2WK} 日（第36-II-3條例假）`);
+                break;
+            }
+        }
+        // 每 4 週(28日)滑動窗口至少 8 休
+        for (let s = 0; s + 28 <= allDates.length; s++) {
+            if (offCountInWindow(worked, s, 28) < REST_PER_4WK) {
+                warnings.push(`${nameOf(p.id)}：${allDates[s].slice(5)}起四週內休假不足 ${REST_PER_4WK} 日（第36-II-3條）`);
+                break;
+            }
+        }
+        if (otTotal[p.id] > MAX_OT_PER_MONTH)
+            warnings.push(`${nameOf(p.id)}：當月延長工時 ${otTotal[p.id]}h 超過 ${MAX_OT_PER_MONTH}h（第32條）`);
+    }
+    return { ym, assignments, shortages, perPerson, warnings };
+}
+let _idCounter = 0;
+/** 產生穩定 id（client-side）。 */
+function newId(prefix) {
+    _idCounter += 1;
+    const rnd = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID().slice(0, 8)
+        : Math.floor(Math.random() * 1e9).toString(36);
+    return `${prefix}_${rnd}${_idCounter}`;
+}
+function prevMonth(ym) {
+    const [y, m] = ym.split("-").map(Number);
+    const d = new Date(y, m - 2, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function nextMonth(ym) {
+    const [y, m] = ym.split("-").map(Number);
+    const d = new Date(y, m, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+return exports;})();
+'use strict';
+(() => {
+const $ = id => document.getElementById(id);
+const KEY = 'er-scheduling-offline-v1';
+const VERSION = 1;
+const fresh = () => ({version: VERSION, people: [], shifts: [], months: {}});
+let state = fresh();
+let ym = Roster.currentYm();
+let storageOK = true;
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const id = prefix => Roster.newId(prefix);
+const validMonth = value => /^20\d{2}-(0[1-9]|1[0-2])$/.test(value) || /^2100-(0[1-9]|1[0-2])$/.test(value);
+const dates = () => Roster.daysInMonth(ym);
+const month = () => state.months[ym] ??= {off: {}, needs: {}, cells: null};
+function message(text, error = false) { $('status').textContent = text; $('status').className = error ? 'error' : ''; }
+function save(text = '已儲存在此瀏覽器') {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); storageOK = true; message(text); }
+  catch { storageOK = false; message('瀏覽器無法儲存，資料暫存在記憶體，請在關閉前匯出備份。', true); }
+}
+const record = x => x && typeof x === 'object' && !Array.isArray(x) && Object.getPrototypeOf(x) === Object.prototype;
+function validate(input) {
+  const fail = () => { throw new Error('備份格式不正確或版本不支援，原有資料未變更。'); };
+  if (!record(input) || input.version !== VERSION || !Array.isArray(input.people) || !Array.isArray(input.shifts) || !record(input.months)) fail();
+  if (input.people.length > 200 || input.shifts.length > 20 || Object.keys(input.months).length > 240) fail();
+  const ids = new Set(); const names = new Set();
+  const text = x => typeof x === 'string' && x.length > 0 && x.length <= 100;
+  const safeId = x => typeof x === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(x) && !['__proto__','constructor','prototype'].includes(x);
+  const out = fresh();
+  for (const s of input.shifts) {
+    if (!record(s) || !safeId(s.id) || ids.has(s.id) || !text(s.label) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(s.start) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(s.end) || s.start === s.end || !Number.isInteger(s.need) || s.need < 0 || s.need > 200) fail();
+    ids.add(s.id); out.shifts.push({id:s.id,label:s.label,start:s.start,end:s.end,need:s.need});
+  }
+  const shiftIds = new Set(ids); ids.clear();
+  for (const p of input.people) {
+    if (!record(p) || !safeId(p.id) || ids.has(p.id) || !text(p.name) || names.has(p.name) || !Array.isArray(p.allowed) || p.allowed.some(s => !shiftIds.has(s))) fail();
+    ids.add(p.id); names.add(p.name); out.people.push({id:p.id,name:p.name,allowed:[...new Set(p.allowed)]});
+  }
+  for (const [key,m] of Object.entries(input.months)) {
+    if (!validMonth(key) || !record(m) || !record(m.off) || !record(m.needs) || !(m.cells === null || record(m.cells))) fail();
+    const daySet = new Set(Roster.daysInMonth(key));
+    const clean = {off:{}, needs:{}, cells:m.cells === null ? null : {}};
+    for (const [pid,days] of Object.entries(m.off)) {
+      if (!ids.has(pid) || !Array.isArray(days) || days.length > 31 || days.some(d => !daySet.has(d))) fail();
+      clean.off[pid] = [...new Set(days)];
+    }
+    for (const [day,needs] of Object.entries(m.needs)) {
+      if (!daySet.has(day) || !record(needs)) fail(); clean.needs[day] = {};
+      for (const [sid,n] of Object.entries(needs)) {
+        if (!shiftIds.has(sid) || !Number.isInteger(n) || n < 0 || n > 200) fail(); clean.needs[day][sid] = n;
+      }
+    }
+    if (m.cells !== null) for (const [pid,row] of Object.entries(m.cells)) {
+      if (!ids.has(pid) || !record(row)) fail(); clean.cells[pid] = {};
+      for (const [day,sid] of Object.entries(row)) {
+        if (!daySet.has(day) || !shiftIds.has(sid)) fail(); clean.cells[pid][day] = sid;
+      }
+    }
+    out.months[key] = clean;
+  }
+  return out;
+}
+try {
+  const stored = localStorage.getItem(KEY);
+  if (stored) state = validate(JSON.parse(stored));
+} catch { storageOK = false; message('無法讀取儲存資料，請匯入備份。原有儲存資料尚未覆寫。', true); }
+$('month').value = ym;
+function dayHeaders() { return dates().map(d => `<th scope="col">${Number(d.slice(-2))}<div class="day">${Roster.WEEKDAY_LABELS[Roster.weekdayOf(d)]}</div></th>`).join(''); }
+function renderShifts() {
+  $('shifts').innerHTML = state.shifts.map(s => `<tr data-shift="${s.id}"><td><input aria-label="班種名稱" data-field="label" value="${esc(s.label)}" maxlength="100" style="width:110px"></td><td><input aria-label="開始時間" type="time" data-field="start" value="${s.start}"></td><td><input aria-label="結束時間" type="time" data-field="end" value="${s.end}"></td><td><input aria-label="每日需求人數" type="number" data-field="need" min="0" max="200" value="${s.need}"></td><td><button class="danger" data-delete="${s.id}" aria-label="刪除 ${esc(s.label)}">刪除</button></td></tr>`).join('');
+}
+function renderAllowed() {
+  if (!state.people.length || !state.shifts.length) { $('allowed').innerHTML = '<p class="empty">設定人員與班種後，可在這裡調整。</p>'; return; }
+  $('allowed').innerHTML = `<table><thead><tr><th>人員</th>${state.shifts.map(s => `<th>${esc(s.label)}</th>`).join('')}</tr></thead><tbody>${state.people.map(p => `<tr><th scope="row">${esc(p.name)}</th>${state.shifts.map(s => `<td><input type="checkbox" aria-label="${esc(p.name)} 可上 ${esc(s.label)}" data-person="${p.id}" data-shift="${s.id}" ${p.allowed.includes(s.id) ? 'checked' : ''}></td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function renderVacations() {
+  $('vacations').innerHTML = state.people.length ? `<table><thead><tr><th>人員</th>${dayHeaders()}</tr></thead><tbody>${state.people.map(p => `<tr><th scope="row">${esc(p.name)}</th>${dates().map(d => {const off = (month().off[p.id] ?? []).includes(d); return `<td><button class="vacation" data-person="${p.id}" data-day="${d}" aria-label="${esc(p.name)} ${d} 預假" aria-pressed="${off}">${off ? '休' : '·'}</button></td>`;}).join('')}</tr>`).join('')}</tbody></table>` : '<p class="empty">請先新增人員名單。</p>';
+}
+function renderNeeds() {
+  $('requirements').innerHTML = state.shifts.length ? `<table><thead><tr><th>班種</th>${dayHeaders()}</tr></thead><tbody>${state.shifts.map(s => `<tr><th scope="row">${esc(s.label)}</th>${dates().map(d => `<td><input type="number" min="0" max="200" placeholder="${s.need}" value="${month().needs[d]?.[s.id] ?? ''}" data-day="${d}" data-shift="${s.id}" aria-label="${d} ${esc(s.label)}需求"></td>`).join('')}</tr>`).join('')}</tbody></table>` : '<p class="empty">請先新增班種。</p>';
+}
+const need = (d,s) => month().needs[d]?.[s.id] ?? s.need;
+function summary() {
+  const m = month(); const warnings = []; const shortages = []; const counts = {}; const hours = {};
+  for (const d of dates()) for (const s of state.shifts) {
+    const got = state.people.filter(p => m.cells?.[p.id]?.[d] === s.id).length;
+    if (got < need(d,s)) shortages.push(`${d} ${s.label}：缺 ${need(d,s) - got} 人`);
+    if (got > need(d,s)) warnings.push(`${d} ${s.label}：超出需求 ${got - need(d,s)} 人`);
+  }
+  for (const p of state.people) {
+    let consecutive = 0; let longest = 0; let end = -Infinity; let overtime = 0; counts[p.id] = 0; hours[p.id] = 0;
+    dates().forEach((d,i) => {
+      const sid = m.cells?.[p.id]?.[d]; const s = state.shifts.find(s => s.id === sid);
+      if (!s) { consecutive = 0; return; }
+      counts[p.id]++; hours[p.id] += Roster.shiftHours(s); overtime += Math.max(0, Roster.shiftHours(s) - 10);
+      longest = Math.max(longest, ++consecutive);
+      const start = i*1440 + Number(s.start.slice(0,2))*60 + Number(s.start.slice(3));
+      if (start - end < 660) warnings.push(`${p.name} ${d}：班間休息少於 11 小時`);
+      end = start + Roster.shiftHours(s)*60;
+      if ((m.off[p.id] ?? []).includes(d)) warnings.push(`${p.name} ${d}：排在預假日`);
+      if (!p.allowed.includes(sid)) warnings.push(`${p.name} ${d}：排入未勾選的班種`);
+    });
+    if (longest > 5) warnings.push(`${p.name}：最多連續上班 ${longest} 天（超過引擎 5 天上限）`);
+    if (overtime > 46) warnings.push(`${p.name}：以每日 10 小時以上計的延長工時 ${overtime} 小時，超過引擎 46 小時上限`);
+    for (const [span,minOff] of [[14,2],[28,8]]) {
+      for (let i=0;i+span<=dates().length;i++) {
+        const off = dates().slice(i,i+span).filter(d => !m.cells?.[p.id]?.[d]).length;
+        if (off < minOff) { warnings.push(`${p.name}：${dates()[i]} 起 ${span} 天內未排班日少於 ${minOff} 天`); break; }
+      }
+    }
+  }
+  return {warnings, shortages, counts, hours};
+}
+function renderSchedule() {
+  const m = month();
+  $('csv').disabled = $('print').disabled = !m.cells;
+  if (!m.cells) { $('schedule').innerHTML = '<p class="empty">此月份尚無班表。設定完成後，按「自動排班」或「建立空白班表」。</p>'; $('checks').textContent = ''; return; }
+  const stats = summary();
+  $('schedule').innerHTML = `<table><caption>${esc(ym)} 班表</caption><thead><tr><th>人員</th>${dayHeaders()}<th>班數</th><th>時數</th></tr></thead><tbody>${state.people.map(p => `<tr><th scope="row">${esc(p.name)}</th>${dates().map(d => {const sid = m.cells[p.id]?.[d] ?? ''; return `<td class="${(m.off[p.id] ?? []).includes(d) ? 'off' : ''}"><select aria-label="${esc(p.name)} ${d} 班種" data-person="${p.id}" data-day="${d}"><option value="">休</option>${state.shifts.map(s => `<option value="${s.id}" ${s.id === sid ? 'selected' : ''}>${esc(s.label)}</option>`).join('')}</select><span class="print-only">${esc(state.shifts.find(s => s.id === sid)?.label ?? '休')}</span></td>`;}).join('')}<td>${stats.counts[p.id]}</td><td>${Number(stats.hours[p.id].toFixed(2))}</td></tr>`).join('')}</tbody></table>`;
+  $('checks').innerHTML = `<p>${stats.shortages.length ? `${stats.shortages.length} 個班次有缺額` : '每日需求皆已滿足'} · ${stats.warnings.length} 項排班提示</p>${stats.shortages.length ? `<details><summary>查看缺額</summary><ul>${stats.shortages.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}${stats.warnings.length ? `<details open><summary>查看排班提示</summary><ul>${stats.warnings.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}`;
+}
+function render() { $('people').value = state.people.map(p => p.name).join('\n'); renderShifts(); renderAllowed(); renderVacations(); renderNeeds(); renderSchedule(); }
+function changed() { save('已儲存設定；既有班表可手動調整或重新排班。'); renderAllowed(); renderNeeds(); renderSchedule(); }
+$('applyPeople').onclick = () => {
+  const names = $('people').value.split('\n').map(n => n.trim()).filter(Boolean);
+  if (names.length > 200 || names.some(n => n.length > 100) || new Set(names).size !== names.length) { message('姓名不可重複，每個姓名最多 100 字，名單最多 200 人。',true); return; }
+  const removed = state.people.filter(p => !names.includes(p.name));
+  if (removed.length && !confirm('移除人員也會移除其各月預假和班表。確定套用？')) return;
+  state.people = names.map(name => state.people.find(p => p.name === name) ?? {id:id('p'),name,allowed:state.shifts.map(s=>s.id)});
+  for (const m of Object.values(state.months)) for (const p of removed) { delete m.off[p.id]; if (m.cells) delete m.cells[p.id]; }
+  save(); render();
+};
+$('addShift').onclick = () => {
+  if (state.shifts.length >= 20) { message('最多設定 20 種班種。',true); return; }
+  const sid = id('s'); state.shifts.push({id:sid,label:`班種 ${state.shifts.length+1}`,start:'08:00',end:'16:00',need:1});
+  for (const p of state.people) p.allowed.push(sid);
+  save(); render();
+};
+$('shifts').onchange = e => {
+  const input = e.target; const row = input.closest('[data-shift]'); if (!row || !input.dataset.field) return;
+  const s = state.shifts.find(s => s.id === row.dataset.shift); const field = input.dataset.field;
+  if (!input.checkValidity() || !input.value.trim() || (field === 'need' && !Number.isInteger(Number(input.value)))) { message('請填寫有效的班種設定，人數需為 0–200 的整數。',true); renderShifts(); return; }
+  const value = field === 'need' ? Number(input.value) : input.value.trim();
+  if ((field === 'start' && value === s.end) || (field === 'end' && value === s.start)) { message('開始與結束不可相同。',true); renderShifts(); return; }
+  s[field] = value; changed();
+};
+$('shifts').onclick = e => {
+  const sid = e.target.closest('[data-delete]')?.dataset.delete;
+  if (!sid || !confirm('刪除此班種也會清除各月份對應班表格與需求。確定刪除？')) return;
+  state.shifts = state.shifts.filter(s => s.id !== sid);
+  for (const p of state.people) p.allowed = p.allowed.filter(s => s !== sid);
+  for (const m of Object.values(state.months)) { for (const n of Object.values(m.needs)) delete n[sid]; if (m.cells) for (const row of Object.values(m.cells)) for (const d of Object.keys(row)) if (row[d] === sid) delete row[d]; }
+  save(); render();
+};
+$('allowed').onchange = e => { const {person,shift} = e.target.dataset; const p = state.people.find(p => p.id === person); if (!p) return; p.allowed = e.target.checked ? [...new Set([...p.allowed,shift])] : p.allowed.filter(s => s !== shift); changed(); };
+$('month').onchange = () => { const next = $('month').value; if (!validMonth(next)) { $('month').value = ym; message('請選擇 2000–2100 年的有效月份。',true); return; } ym = next; renderVacations(); renderNeeds(); renderSchedule(); message('已切換月份'); };
+$('vacations').onclick = e => { const b = e.target.closest('[data-person]'); if (!b) return; const {person,day} = b.dataset; const off = month().off[person] ?? []; month().off[person] = off.includes(day) ? off.filter(d => d !== day) : [...off,day]; save(); b.setAttribute('aria-pressed',String(month().off[person].includes(day))); b.textContent = month().off[person].includes(day) ? '休' : '·'; renderSchedule(); };
+$('requirements').onchange = e => { const {day,shift} = e.target.dataset; if (!day) return; const value = e.target.value; if (!e.target.checkValidity() || (value !== '' && !Number.isInteger(Number(value)))) { message('需求需為 0–200 的整數。',true); renderNeeds(); return; } const needs = month().needs[day] ??= {}; if (value === '') delete needs[shift]; else needs[shift] = Number(value); save(); renderSchedule(); };
+function canCreate() { if (!state.people.length || !state.shifts.length) { message('請先設定人員及班種。',true); return false; } return !month().cells || confirm('這會覆寫本月既有班表，建議先匯出備份。確定繼續？'); }
+$('generate').onclick = () => {
+  if (!canCreate()) return;
+  try {
+    const config = {...Roster.emptyConfig(), people:state.people.filter(p=>p.allowed.length).map(p=>({id:p.id,empId:p.id,name:p.name,allowedShifts:p.allowed})), shifts:state.shifts, positions:[{id:'general',label:'一般'}], defaultReq:Object.fromEntries(state.shifts.map(s=>[s.id,{general:s.need}])), dailyReq:{}};
+    for (const d of dates()) config.dailyReq[d] = Object.fromEntries(state.shifts.map(s=>[s.id,{general:need(d,s)}]));
+    const vacation = {ym,group:'offline',people:state.people.map(p=>({empId:p.id,name:p.name,days:Object.fromEntries((month().off[p.id]??[]).map(d=>[d,{raw:'OFF',off:true}]))}))};
+    const result = Roster.generateSchedule(config,ym,vacation);
+    const cells = Object.fromEntries(state.people.map(p=>[p.id,{}]));
+    for (const [d,shifts] of Object.entries(result.assignments)) for (const [sid,positions] of Object.entries(shifts)) for (const pids of Object.values(positions)) for (const pid of pids) cells[pid][d] = sid;
+    month().cells = cells; save('已產生並儲存本月班表，請檢查缺額與提示。'); renderSchedule();
+  } catch (error) { message(`排班失敗：${error.message}，可嘗試減少人數或需求。`,true); }
+};
+$('blank').onclick = () => { if (!canCreate()) return; month().cells = {}; save(); renderSchedule(); };
+$('schedule').onchange = e => { const {person,day} = e.target.dataset; if (!person) return; const row = month().cells[person] ??= {}; if (e.target.value) row[day] = e.target.value; else delete row[day]; save(); renderSchedule(); };
+function download(name,body,type) { const url = URL.createObjectURL(new Blob([body],{type})); const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
+$('backup').onclick = () => { download(`排班備份-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(state,null,2),'application/json'); message(storageOK ? '已匯出所有月份與設定的備份。' : '已匯出備份，請確認檔案已下載。'); };
+$('import').onclick = () => $('restore').click();
+$('restore').onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    if (file.size > 10*1024*1024) throw new Error('備份檔案過大（上限 10 MB）。');
+    const restored = validate(JSON.parse(await file.text()));
+    if (!confirm('匯入會取代全部名單、設定及各月份班表，確定繼續？')) return;
+    state = restored; save('已匯入備份'); render();
+  } catch (error) { message(`匯入失敗：${error.message}`,true); }
+  finally { e.target.value = ''; }
+};
+$('csv').onclick = () => {
+  if (!month().cells) return;
+  const stats = summary();
+  const safeCell = v => { const text = String(v); return '"' + (/^[\s]*[=+@-]/.test(text) ? "'"+text : text).replace(/"/g,'""') + '"'; };
+  const rows = [['人員',...dates(),'班數','時數'],...state.people.map(p=>[p.name,...dates().map(d=>state.shifts.find(s=>s.id === month().cells[p.id]?.[d])?.label ?? '休'),stats.counts[p.id],Number(stats.hours[p.id].toFixed(2))])];
+  download(`班表-${ym}.csv`,'\uFEFF'+rows.map(row=>row.map(safeCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');
+};
+$('print').onclick = () => window.print();
+$('reset').onclick = () => { if (!confirm('將清除這個瀏覽器中的全部人員、設定和班表。請先匯出備份。確定清除？')) return; state = fresh(); save('已清除全部資料'); render(); };
+render();
+if (storageOK) message('已就緒，變更會自動儲存在此瀏覽器。');
+})();
+</script>
+</body></html>
